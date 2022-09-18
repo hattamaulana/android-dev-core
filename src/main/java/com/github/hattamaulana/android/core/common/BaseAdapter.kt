@@ -7,6 +7,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import androidx.viewbinding.ViewBinding
+import com.github.hattamaulana.android.core.util.FragmentInflater
 
 interface DiffUtilCallbackItem {
     fun diff(): String
@@ -25,31 +26,17 @@ open class BaseObject<T : DiffUtilCallbackItem> : DiffUtil.ItemCallback<T>() {
 
 class ViewHolder<VB : ViewBinding>(val binding: VB) : RecyclerView.ViewHolder(binding.root)
 
-abstract class BaseAdapter<M : DiffUtilCallbackItem> :
-    ListAdapter<M, ViewHolder<ViewBinding>>(BaseObject<M>()) {
+abstract class BaseAdapter<M : DiffUtilCallbackItem, VB: ViewBinding>(
+    private val inflater: FragmentInflater<VB>
+) : ListAdapter<M, ViewHolder<VB>>(BaseObject<M>()) {
 
-    protected lateinit var context: Context
+    abstract fun binding(holder: VB, item: M, position: Int)
 
-    abstract fun binding(holder: ViewBinding, item: M, position: Int)
-
-    abstract fun createBinding(
-        viewType: Int,
-        inflater: LayoutInflater,
-        parent: ViewGroup
-    ): ViewBinding
-
-    abstract override fun getItemViewType(position: Int): Int
-
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder<ViewBinding> {
-        context = parent.context
-
-        val inflater = LayoutInflater.from(context)
-        val binding = createBinding(viewType, inflater, parent)
-
-        return ViewHolder(binding)
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder<VB> {
+        return ViewHolder(inflater.invoke(LayoutInflater.from(parent.context), parent, false))
     }
 
-    override fun onBindViewHolder(holder: ViewHolder<ViewBinding>, position: Int) {
+    override fun onBindViewHolder(holder: ViewHolder<VB>, position: Int) {
         binding(holder.binding, getItem(position), position)
     }
 }

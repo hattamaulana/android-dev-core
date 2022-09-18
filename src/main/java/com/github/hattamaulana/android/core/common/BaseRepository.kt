@@ -20,13 +20,33 @@ abstract class BaseRepository(protected val context: Context) {
 
     protected abstract suspend fun refreshToken()
 
-    fun <T, R> createRequestWithFlow(
+
+    fun <T> getResponse(
+        refreshTokenWhenExpired: Boolean = true,
+        directHandling: Boolean = true,
+        request: suspend () -> Response<T>,
+    ): Flow<T> = flow {
+        when (val result = sendRequest(refreshTokenWhenExpired, directHandling) { request() }) {
+            is Resource.Error -> {
+                if (result.isResponseError) {
+                    throw SendRequestException(result.message)
+                } else {
+                    throw Exception(result.message)
+                }
+            }
+
+            is Resource.Success -> emit(result.data)
+        }
+    }.flowOn(Dispatchers.IO)
+
+
+    fun <T, R> getResponseWithMapper(
         request: suspend () -> Response<T>,
         mapper: (T) -> R,
         refreshTokenWhenExpired: Boolean = true,
         directHandling: Boolean = true,
     ): Flow<R> = flow {
-        when (val result = createRequest(refreshTokenWhenExpired, directHandling) { request() }) {
+        when (val result = sendRequest(refreshTokenWhenExpired, directHandling) { request() }) {
             is Resource.Error -> {
                 if (result.isResponseError) {
                     throw SendRequestException(result.message)
@@ -39,7 +59,8 @@ abstract class BaseRepository(protected val context: Context) {
         }
     }.flowOn(Dispatchers.IO)
 
-    suspend fun <T> createRequest(
+
+    suspend fun <T> sendRequest(
         refreshTokenWhenExpired: Boolean = true,
         directHandling: Boolean = true,
         catchError: ((data: BaseResponse<*>) -> Resource<T>)? = null,
@@ -59,7 +80,7 @@ abstract class BaseRepository(protected val context: Context) {
                 response.code() == 401 && refreshTokenWhenExpired -> {
                     refreshToken()
                     Thread.sleep(1_000)
-                    createRequest(refreshTokenWhenExpired, directHandling, catchError, call)
+                    sendRequest(refreshTokenWhenExpired, directHandling, catchError, call)
                 }
 
                 else -> {
