@@ -6,10 +6,10 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.viewbinding.ViewBinding
-import com.github.hattamaulana.android.core.util.Inflate
+import com.github.hattamaulana.android.core.util.FragmentInflater
 
 abstract class BaseFragment<T : ViewBinding>(
-    private val inflate: Inflate<T>
+    private val fragmentInflater: FragmentInflater<T>
 ) : Fragment() {
 
     protected var binding: T? = null
@@ -19,7 +19,7 @@ abstract class BaseFragment<T : ViewBinding>(
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        binding = inflate.invoke(inflater, container, false)
+        binding = fragmentInflater.invoke(inflater, container, false)
         return binding!!.root
     }
 
